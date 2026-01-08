@@ -16,7 +16,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 app = Flask(__name__)
 
 # 한글 폰트(서버가 Windows일 때)
-pdfmetrics.registerFont(TTFont('MalgunGothic', 'C:/Windows/Fonts/malgun.ttf'))
+pdfmetrics.registerFont(TTFont('MalgunGothic', 'C:/Windows/Fonts/H2GTRE.ttf'))
 
 # MSSQL 연결
 server = 'ms0501.gabiadb.com'
@@ -194,3 +194,4 @@ def pdf():
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5001)
+
