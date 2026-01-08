@@ -36,6 +36,8 @@ SERVER={server};
 DATABASE={database};
 UID={username};
 PWD={password};
+Encrypt=no;
+TrustServerCertificate=yes;
 """
 
 # 공차 (추후 Spec별로 바꾸는 것도 가능)
@@ -201,5 +203,6 @@ def pdf():
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5001)
+
 
 
