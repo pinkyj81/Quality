@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, send_file, redirect, url_for
-import pymssql
+import pyodbc
 import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # GUI 없는 백엔드 사용
@@ -80,13 +80,13 @@ def fetch_df(code, start, end):
         SELECT L.BaseNo, L.SData, L.EntryDate, B.Spec
         FROM dbo.GaGongSelfL AS L
         JOIN dbo.GaGongSelfBase AS B ON L.BaseNo = B.BaseNo
-        WHERE L.CodeNo = %s
-          AND L.EntryDate BETWEEN %s AND %s
+        WHERE L.CodeNo = ?
+          AND L.EntryDate BETWEEN ? AND ?
     """
     try:
-        conn_params = get_connection_string()
+        conn_str = get_connection_string()
         logger.info(f"DB 조회: code={code}, start={start}, end={end}")
-        with pymssql.connect(**conn_params) as conn:
+        with pyodbc.connect(conn_str) as conn:
             df = pd.read_sql(query, conn, params=[code, start, end])
         
         df["SData_clean"] = df["SData"].apply(parse_value)

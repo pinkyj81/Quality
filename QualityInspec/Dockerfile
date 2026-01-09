@@ -3,11 +3,15 @@ FROM python:3.11-slim
 # 작업 디렉토리 설정
 WORKDIR /app
 
-# FreeTDS 설치 (pymssql용, ODBC 드라이버보다 훨씬 간단)
-RUN apt-get update && apt-get install -y \
-    freetds-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# ODBC Driver 17 설치
+RUN apt-get update && \
+    apt-get install -y curl gnupg2 && \
+    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+    curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && \
+    ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Python 패키지 설치
 COPY requirements.txt .

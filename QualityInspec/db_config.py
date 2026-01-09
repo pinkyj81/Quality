@@ -30,21 +30,15 @@ if not all([DB_SERVER, DB_DATABASE, DB_USERNAME, DB_PASSWORD]):
     DB_PASSWORD = DB_PASSWORD or 'yj8630'  # 로컬 개발용
 
 def get_connection_string():
-    """pymssql 연결 딕셔너리 반환"""
-    return {
-        'server': DB_SERVER,
-        'port': int(DB_PORT),
-        'database': DB_DATABASE,
-        'user': DB_USERNAME,
-        'password': DB_PASSWORD,
-        'charset': 'utf8',
-        'timeout': 30,
-        'login_timeout': 30,
-        'tds_version': '7.0',  # SQL Server 2000/2005 호환
-        'as_dict': False
-    }
+    """ODBC 연결 문자열 반환"""
+    return f"""DRIVER={{ODBC Driver 17 for SQL Server}};
+SERVER={DB_SERVER},{DB_PORT};
+DATABASE={DB_DATABASE};
+UID={DB_USERNAME};
+PWD={DB_PASSWORD};
+TrustServerCertificate=yes;"""
 
 def get_connection():
-    """pymssql 연결 객체 반환"""
-    import pymssql
-    return pymssql.connect(**get_connection_string())
+    """pyodbc 연결 객체 반환"""
+    import pyodbc
+    return pyodbc.connect(get_connection_string())
