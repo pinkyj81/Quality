@@ -1,0 +1,7 @@
+flask
+pymssql
+pandas
+matplotlib
+reportlab
+python-dotenv
+gunicorn
