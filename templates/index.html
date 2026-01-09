@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>공정능력 분석</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h2 { color: #333; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: inline-block; width: 100px; font-weight: bold; color: #555; }
+    select, input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    button { padding: 10px 30px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+    button:hover { background-color: #45a049; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+    th { background-color: #4CAF50; color: white; font-weight: bold; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .error { color: red; font-weight: bold; margin-top: 20px; }
+    .result-info { margin: 20px 0; padding: 10px; background-color: #e8f5e9; border-left: 4px solid #4CAF50; }
+    hr { margin: 30px 0; border: none; border-top: 2px solid #eee; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>공정능력 분석</h2>
+
+    <form action="/" method="post">
+      <div class="form-group">
+        <label>제품코드</label>
+        <select name="code">
+          {% for c in codes %}
+            <option value="{{c}}" {% if code == c %}selected{% endif %}>{{c}}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>시작일</label>
+        <input type="date" name="start" value="{{start}}" required>
+      </div>
+
+      <div class="form-group">
+        <label>종료일</label>
+        <input type="date" name="end" value="{{end}}" required>
+      </div>
+
+      <button type="submit">분석 실행</button>
+    </form>
+
+    {% if results is not none %}
+      <hr>
+      
+      {% if msg %}
+        <p class="error">{{msg}}</p>
+      {% else %}
+        <div class="result-info">
+          <strong>제품코드:</strong> {{code}} | <strong>기간:</strong> {{start}} ~ {{end}}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Spec</th><th>평균</th><th>표준편차</th><th>Cp</th><th>Cpk</th><th>히스토그램</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in results %}
+            <tr>
+              <td>{{r.spec}}</td>
+              <td>{{"%.3f"|format(r.mean)}}</td>
+              <td>{{"%.3f"|format(r.std)}}</td>
+              <td>{{"%.3f"|format(r.cp)}}</td>
+              <td>{{"%.3f"|format(r.cpk)}}</td>
+              <td><img src="data:image/png;base64,{{r.hist_img}}" style="height:80px; width:auto;"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <form action="/pdf" method="post" style="margin-top:20px;">
+          <input type="hidden" name="code" value="{{code}}">
+          <input type="hidden" name="start" value="{{start}}">
+          <input type="hidden" name="end" value="{{end}}">
+          <button type="submit">PDF 다운로드</button>
+        </form>
+      {% endif %}
+    {% endif %}
+  </div>
+</body>
+</html>
