@@ -12,33 +12,33 @@ from reportlab.pdfgen import canvas as pdf_canvas
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from db_config import get_connection_string
 
 app = Flask(__name__)
 
-# 한글 폰트(서버가 Windows일 때)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FONT_PATH = os.path.join(BASE_DIR, "fonts", "H2GTRE.ttf")
+# 한글 폰트 설정 (크로스 플랫폼 지원)
+def setup_korean_font():
+    """한글 폰트를 등록합니다 (Windows/Linux 모두 지원)"""
+    font_paths = [
+        os.path.join('fonts', 'malgun.ttf'),  # 프로젝트 내 폰트
+        os.path.join('fonts', 'NanumGothic.ttf'),
+        'C:/Windows/Fonts/malgun.ttf',  # Windows
+        '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',  # Linux
+    ]
+    
+    for font_path in font_paths:
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont('KoreanFont', font_path))
+            return 'KoreanFont'
+    
+    # 폰트를 찾지 못한 경우 기본 폰트 사용 (한글 깨질 수 있음)
+    print("경고: 한글 폰트를 찾을 수 없습니다. 기본 폰트를 사용합니다.")
+    return 'Helvetica'
 
-try:
-    pdfmetrics.registerFont(TTFont("MalgunGothic", FONT_PATH))
-except Exception as e:
-    print("Font register failed:", e)
+KOREAN_FONT = setup_korean_font()
 
-
-# MSSQL 연결
-server = 'ms0501.gabiadb.com'
-database = 'yujin'
-username = 'yujin'
-password = 'yj8630'
-conn_str = f"""
-DRIVER={{ODBC Driver 17 for SQL Server}};
-SERVER={server};
-DATABASE={database};
-UID={username};
-PWD={password};
-Encrypt=no;
-TrustServerCertificate=yes;
-"""
+# MSSQL 연결 (db_config.py에서 관리)
+conn_str = get_connection_string()
 
 # 공차 (추후 Spec별로 바꾸는 것도 가능)
 USL = 10.5
@@ -121,16 +121,16 @@ def make_pdf(code, start, end, results):
     width, height = A4
     y = height - 20 * mm
 
-    c.setFont("MalgunGothic", 14)
+    c.setFont(KOREAN_FONT, 14)
     c.drawString(20 * mm, y, "공정능력 분석 리포트")
     y -= 10 * mm
-    c.setFont("MalgunGothic", 12)
+    c.setFont(KOREAN_FONT, 12)
     c.drawString(20 * mm, y, f"제품코드: {code}")
     y -= 7 * mm
     c.drawString(20 * mm, y, f"기간: {start} ~ {end}")
     y -= 12 * mm
 
-    c.setFont("MalgunGothic", 10)
+    c.setFont(KOREAN_FONT, 10)
     c.drawString(20 * mm, y, "Spec          평균          표준편차           Cp            Cpk")
     y -= 8 * mm
 
@@ -138,7 +138,7 @@ def make_pdf(code, start, end, results):
         if y < 40 * mm:
             c.showPage()
             y = height - 20 * mm
-            c.setFont("MalgunGothic", 10)
+            c.setFont(KOREAN_FONT, 10)
 
         c.drawString(20 * mm, y,
                      f"{str(r['spec']):<12} {r['mean']:>7.3f}         {r['std']:>7.3f}          {r['cp']:>6.3f}        {r['cpk']:>6.3f}")
@@ -203,6 +203,3 @@ def pdf():
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5001)
-
-
-
