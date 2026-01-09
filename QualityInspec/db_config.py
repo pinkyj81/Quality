@@ -30,12 +30,13 @@ if not all([DB_SERVER, DB_DATABASE, DB_USERNAME, DB_PASSWORD]):
     DB_PASSWORD = DB_PASSWORD or 'yj8630'  # 로컬 개발용
 
 def get_connection_string():
-    """ODBC 연결 문자열 반환"""
+    """ODBC 연결 문자열 반환 (SQL Server 2008 호환)"""
     return f"""DRIVER={{ODBC Driver 17 for SQL Server}};
 SERVER={DB_SERVER},{DB_PORT};
 DATABASE={DB_DATABASE};
 UID={DB_USERNAME};
 PWD={DB_PASSWORD};
+Encrypt=no;
 TrustServerCertificate=yes;"""
 
 def get_connection():
