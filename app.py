@@ -6,6 +6,7 @@ matplotlib.use('Agg')  # GUI 없는 백엔드 사용
 import matplotlib.pyplot as plt
 import os, uuid, io
 import base64
+import logging
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas as pdf_canvas
@@ -15,6 +16,10 @@ from reportlab.pdfbase.ttfonts import TTFont
 from db_config import get_connection_string
 
 app = Flask(__name__)
+
+# 로깅 설정
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 한글 폰트 설정 (크로스 플랫폼 지원)
 def setup_korean_font():
@@ -36,9 +41,16 @@ def setup_korean_font():
     return 'Helvetica'
 
 KOREAN_FONT = setup_korean_font()
+logger.info(f"한글 폰트 설정: {KOREAN_FONT}")
 
 # MSSQL 연결 (db_config.py에서 관리)
-conn_str = get_connection_string()
+# 연결 문자열은 요청 시마다 가져옵니다 (앱 시작 시 DB 연결 방지)
+try:
+    test_conn_str = get_connection_string()
+    logger.info("DB 연결 설정 완료")
+except Exception as e:
+    logger.error(f"DB 연결 설정 오류: {e}")
+    test_conn_str = None
 
 # 공차 (추후 Spec별로 바꾸는 것도 가능)
 USL = 10.5
@@ -56,6 +68,7 @@ def parse_value(val):
         return None
 
 def fetch_df(code, start, end):
+    """데이터베이스에서 데이터 조회"""
     query = """
         SELECT L.BaseNo, L.SData, L.EntryDate, B.Spec
         FROM dbo.GaGongSelfL AS L
@@ -63,12 +76,19 @@ def fetch_df(code, start, end):
         WHERE L.CodeNo = ?
           AND L.EntryDate BETWEEN ? AND ?
     """
-    with pyodbc.connect(conn_str) as conn:
-        df = pd.read_sql(query, conn, params=[code, start, end])
-
-    df["SData_clean"] = df["SData"].apply(parse_value)
-    df = df.dropna(subset=["SData_clean"])
-    return df
+    try:
+        conn_str = get_connection_string()
+        logger.info(f"DB 조회: code={code}, start={start}, end={end}")
+        with pyodbc.connect(conn_str) as conn:
+            df = pd.read_sql(query, conn, params=[code, start, end])
+        
+        df["SData_clean"] = df["SData"].apply(parse_value)
+        df = df.dropna(subset=["SData_clean"])
+        logger.info(f"조회 결과: {len(df)}개 레코드")
+        return df
+    except Exception as e:
+        logger.error(f"DB 조회 오류: {e}")
+        raise
 
 def analyze(df):
     results = []
@@ -162,12 +182,16 @@ def index():
         end = request.form.get("end")
 
         if code and start and end:
-            df = fetch_df(code, start, end)
-            if df.empty:
-                return render_template("index.html", codes=CODES, code=code, start=start, end=end, results=[], msg="실측값이 포함된 데이터가 없습니다.")
-            
-            results = analyze(df)
-            return render_template("index.html", codes=CODES, code=code, start=start, end=end, results=results, msg=None)
+            try:
+                df = fetch_df(code, start, end)
+                if df.empty:
+                    return render_template("index.html", codes=CODES, code=code, start=start, end=end, results=[], msg="실측값이 포함된 데이터가 없습니다.")
+                
+                results = analyze(df)
+                return render_template("index.html", codes=CODES, code=code, start=start, end=end, results=results, msg=None)
+            except Exception as e:
+                logger.error(f"데이터 처리 오류: {e}")
+                return render_template("index.html", codes=CODES, code=code, start=start, end=end, results=[], msg=f"오류 발생: {str(e)}")
     
     return render_template("index.html", codes=CODES, results=None)
 
@@ -180,12 +204,16 @@ def report():
     if not code or not start or not end:
         return redirect(url_for("index"))
 
-    df = fetch_df(code, start, end)
-    if df.empty:
-        return render_template("report.html", code=code, start=start, end=end, results=[], msg="실측값이 포함된 데이터가 없습니다.")
+    try:
+        df = fetch_df(code, start, end)
+        if df.empty:
+            return render_template("report.html", code=code, start=start, end=end, results=[], msg="실측값이 포함된 데이터가 없습니다.")
 
-    results = analyze(df)
-    return render_template("report.html", code=code, start=start, end=end, results=results, msg=None)
+        results = analyze(df)
+        return render_template("report.html", code=code, start=start, end=end, results=results, msg=None)
+    except Exception as e:
+        logger.error(f"리포트 생성 오류: {e}")
+        return render_template("report.html", code=code, start=start, end=end, results=[], msg=f"오류 발생: {str(e)}")
 
 @app.route("/pdf", methods=["POST"])
 def pdf():
@@ -193,13 +221,17 @@ def pdf():
     start = request.form.get("start")
     end = request.form.get("end")
 
-    df = fetch_df(code, start, end)
-    results = analyze(df)
+    try:
+        df = fetch_df(code, start, end)
+        results = analyze(df)
 
-    pdf_io = make_pdf(code, start, end, results)
-    filename = f"quality_{code}_{start}_{end}.pdf"
+        pdf_io = make_pdf(code, start, end, results)
+        filename = f"quality_{code}_{start}_{end}.pdf"
 
-    return send_file(pdf_io, mimetype="application/pdf", as_attachment=True, download_name=filename)
+        return send_file(pdf_io, mimetype="application/pdf", as_attachment=True, download_name=filename)
+    except Exception as e:
+        logger.error(f"PDF 생성 오류: {e}")
+        return f"PDF 생성 오류: {str(e)}", 500
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5001)

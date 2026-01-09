@@ -1,38 +1,30 @@
-# syntax=docker/dockerfile:1
-FROM python:3.10-slim
+FROM python:3.11-slim
 
-# Avoid interactive prompts and set a consistent timezone/locale
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+# 작업 디렉토리 설정
+WORKDIR /app
 
-# Install system deps and MS ODBC Driver 17 for SQL Server (Debian 12)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        curl \
-        gnupg \
-        ca-certificates \
-        gcc \
-        g++ \
-        unixodbc-dev \
-    # Add Microsoft signing key
-    && curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null \
-    # Add Microsoft repo for Debian 12 (bookworm)
-    && echo "deb [arch=amd64] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/microsoft-prod.list \
+# 시스템 의존성 설치 (ODBC 드라이버)
+RUN apt-get update && apt-get install -y \
+    curl \
+    apt-transport-https \
+    gnupg2 \
+    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Python 패키지 설치
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
+# 애플리케이션 코드 복사
 COPY . .
 
-EXPOSE 5000
+# 포트 노출
+EXPOSE 10000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# 앱 실행
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000", "--workers", "2", "--timeout", "120"]

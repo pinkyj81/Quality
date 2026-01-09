@@ -52,16 +52,60 @@ python app.py
 
 ### Render 배포 (추천)
 
-1. GitHub에 코드 푸시
-2. [Render](https://render.com)에서 New > Web Service 선택
-3. 리포지토리 연결
-4. 환경 변수 설정:
-   - `DB_SERVER`
-   - `DB_DATABASE`
-   - `DB_USERNAME`
-   - `DB_PASSWORD`
-5. Build Command: `pip install -r requirements.txt`
-6. Start Command: `gunicorn app:app`
+1. **GitHub에 코드 푸시**
+
+2. **Render에서 배포**:
+   - [Render](https://render.com) 로그인
+   - **New** > **Web Service** 선택
+   - GitHub 리포지토리 연결
+   
+3. **설정**:
+   - **Build Command**: `bash build.sh`
+   - **Start Command**: `gunicorn app:app`
+   - **Environment**: Python 3
+
+4. **환경 변수 설정** (Environment 탭):
+   ```
+   DB_SERVER=ms0501.gabiadb.com
+   DB_DATABASE=yujin
+   DB_USERNAME=yujin
+   DB_PASSWORD=your_password
+   ```
+
+5. **중요**: Render는 기본적으로 root 권한이 없어서 `build.sh`가 실패할 수 있습니다.
+   대신 **Dockerfile**을 사용하세요 (아래 참조).
+
+### Render 배포 (Dockerfile 사용 - 권장)
+
+Render에서는 Dockerfile이 더 안정적입니다. 다음 내용으로 `Dockerfile` 생성:
+
+```dockerfile
+FROM python:3.11-slim
+
+# ODBC 드라이버 설치
+RUN apt-get update && apt-get install -y \
+    curl \
+    apt-transport-https \
+    gnupg2 \
+    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev \
+    && apt-get clean
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000"]
+```
+
+Render 설정:
+- Build Command: (비워두기)
+- Start Command: (비워두기)
+- Docker를 자동 감지합니다
 
 ### Railway 배포
 
