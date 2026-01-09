@@ -1,5 +1,5 @@
 flask
-pyodbc
+pymssql
 pandas
 matplotlib
 reportlab

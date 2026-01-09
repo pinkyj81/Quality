@@ -19,16 +19,16 @@ if not all([DB_SERVER, DB_DATABASE, DB_USERNAME, DB_PASSWORD]):
     DB_PASSWORD = DB_PASSWORD or 'yj8630'  # 로컬 개발용
 
 def get_connection_string():
-    """MSSQL 연결 문자열 반환"""
-    return f"""
-DRIVER={{ODBC Driver 17 for SQL Server}};
-SERVER={DB_SERVER};
-DATABASE={DB_DATABASE};
-UID={DB_USERNAME};
-PWD={DB_PASSWORD};
-"""
+    """pymssql 연결 딕셔너리 반환"""
+    return {
+        'server': DB_SERVER,
+        'database': DB_DATABASE,
+        'user': DB_USERNAME,
+        'password': DB_PASSWORD,
+        'charset': 'utf8'
+    }
 
 def get_connection():
-    """pyodbc 연결 객체 반환"""
-    import pyodbc
-    return pyodbc.connect(get_connection_string())
+    """pymssql 연결 객체 반환"""
+    import pymssql
+    return pymssql.connect(**get_connection_string())
