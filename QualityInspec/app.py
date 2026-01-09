@@ -46,6 +46,13 @@ logger.info(f"한글 폰트 설정: {KOREAN_FONT}")
 # MSSQL 연결 (db_config.py에서 관리)
 # 연결 문자열은 요청 시마다 가져옵니다 (앱 시작 시 DB 연결 방지)
 try:
+    from db_config import DB_SERVER, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+    logger.info(f"=== 환경 변수 확인 ===")
+    logger.info(f"DB_SERVER: {DB_SERVER}")
+    logger.info(f"DB_DATABASE: {DB_DATABASE}")
+    logger.info(f"DB_USERNAME: {DB_USERNAME}")
+    logger.info(f"DB_PASSWORD: {'*' * len(DB_PASSWORD) if DB_PASSWORD else 'None'}")
+    
     test_conn_str = get_connection_string()
     logger.info("DB 연결 설정 완료")
 except Exception as e:
