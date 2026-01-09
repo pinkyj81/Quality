@@ -39,7 +39,9 @@ def get_connection_string():
         'password': DB_PASSWORD,
         'charset': 'utf8',
         'timeout': 30,
-        'login_timeout': 30
+        'login_timeout': 30,
+        'tds_version': '7.0',  # SQL Server 2000/2005 호환
+        'as_dict': False
     }
 
 def get_connection():
